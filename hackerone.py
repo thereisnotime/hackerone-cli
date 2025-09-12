@@ -383,6 +383,10 @@ def program():
     print("Bounty: " + ("yes" if data["attributes"]["offers_bounties"] else "no"))
     print("Bounty Splitting: " + ("yes" if data["attributes"]["allows_bounty_splitting"] else "no"))
     print("Bookmarked: " + ("yes" if data["attributes"]["bookmarked"] else "no"))
+
+    print("\nPolicy")
+    print("--------------------")
+    print(data["attributes"]["policy"])
     
     print("\nScope")
     for scope in data["relationships"]["structured_scopes"]["data"]:
