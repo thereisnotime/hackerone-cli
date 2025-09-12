@@ -389,7 +389,11 @@ def program():
 
     print("\nPolicy")
     print("--------------------")
-    print(data["attributes"]["policy"])
+    try:
+        mdv.term_columns = os.get_terminal_size()[0]
+        print(mdv.main(data["attributes"]["policy"]))
+    except FileNotFoundError:
+        print(data["attributes"]["policy"])
     
     print("\nScope")
     for scope in data["relationships"]["structured_scopes"]["data"]:
@@ -485,4 +489,7 @@ def main():
             sys.exit()
     
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Exiting...")
