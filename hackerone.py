@@ -10,7 +10,7 @@ import csv as csvmod
 from requests.auth import HTTPBasicAuth
 from dotenv import load_dotenv
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 load_dotenv()
 USERNAME = os.getenv("HACKERONE_USERNAME")
@@ -167,8 +167,11 @@ def report():
     if ("vulnerability_information" in rep["attributes"]):
         print("\nContent")
         print("--------------------")
-        mdv.term_columns = os.get_terminal_size()[0]
-        print(mdv.main(rep["attributes"]["vulnerability_information"]))
+        try:
+            mdv.term_columns = os.get_terminal_size()[0]
+            print(mdv.main(rep["attributes"]["vulnerability_information"]))
+        except FileNotFoundError:
+            print(rep["attributes"]["vulnerability_information"])
 
 
     print("\nComments")
