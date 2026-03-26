@@ -12,10 +12,8 @@ An unofficial CLI client for [HackerOne](https://hackerone.com/). Manage your pr
 - [Usage](#usage)
   - [Global Options](#global-options) | [JSON Output](#json-output)
 - [Commands](#commands)
-  - [Programs & Scope](#programs--scope) — `programs` `program` `csv` `scope` `burp`
-  - [Reports](#reports) — `reports` `report`
-  - [Payments](#payments) — `balance` `earnings` `payouts`
-  - [Account](#account) — `profile` `help`
+  - Hacker: [Programs & Scope](#programs--scope) | [Reports](#reports) | [Payments](#payments) | [Account](#account)
+  - Program Manager: [Organization](#organization--program-management)
 - [Development](#development)
 - [License](#license)
 
@@ -125,6 +123,7 @@ hackerone <command> [args] [options]
 | `--username <user>` | `-u` | HackerOne username (overrides env) |
 | `--api-key <key>` | `-k` | HackerOne API key (overrides env) |
 | `--env-file <path>` | | Path to a custom `.env` file |
+| `--verbose` | `-v` | Show progress and debug info |
 
 ### JSON Output
 
@@ -153,6 +152,10 @@ hackerone program security -j | jq '.attributes.handle'
 | [`payouts`](#payouts) | Payout history |
 | [`profile`](#profile) | Your profile info |
 | [`help`](#help) | Show available commands |
+| | **Program Management** (requires org API token) |
+| [`org`](#org) | Show your organization info |
+| [`org-reports <handle> [max]`](#org-reports-handle-max) | List reports submitted to your program |
+| [`org-report <id>`](#org-report-id) | Get a report submitted to your program |
 
 ---
 
@@ -416,6 +419,60 @@ Location: Right here
 #### `help`
 
 Show all available commands and their arguments.
+
+---
+
+### Organization / Program Management
+
+These commands use the **program management API** and require an organization-level API token (created in Organization Settings > API Tokens on HackerOne), not a hacker profile token.
+
+You can use both token types in the same `.env` by switching with `--username` / `--api-key` flags, or use separate `.env` files with `--env-file`.
+
+#### `org`
+
+Show your organization info — ID, handle, name, and permissions.
+
+```
+$ hackerone org
+
+Organization
+----------------------------------------
+ID: 12345
+Handle: mycompany
+Name: My Company
+Created: 2025-01-01T00:00:00.000Z
+Permissions: report_management, reward
+----------------------------------------
+```
+
+#### `org-reports <handle> [max]`
+
+List reports submitted to your program. Defaults to 10 results. Shows reporter, severity, state, and more.
+
+```
+$ hackerone org-reports mycompany 5
+
+Reports for 'mycompany'
+----------------------------------------
+ID: 1234567
+Title: XSS on login page
+State: triaged
+Date: 2027-03-13T16:48:17.286Z
+Reporter: hackerman
+Severity: high
+CVSS: 8.3
+----------------------------------------
+
+Showing 1 of 1 results.
+```
+
+#### `org-report <id>`
+
+Full details on a report submitted to your program, including content, activities, and metadata.
+
+```
+$ hackerone org-report 1234567
+```
 
 ## Development
 

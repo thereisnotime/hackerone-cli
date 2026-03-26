@@ -58,7 +58,7 @@ def _error_exit(msg):
 
 
 def show_help():
-    commands = {
+    hacker_commands = {
         "balance": "Check your balance",
         "burp <handle>": "Download the burp configuration file (only from public programs)",
         "csv <handle>": "Download CSV scope file (only from public programs)",
@@ -72,18 +72,27 @@ def show_help():
         "reports": "Get a list of your reports",
         "scope <csv> [<outfile>]": "Extract in-scope domains/URLs/wildcards/IPs/CIDRs from a csv scope file and save it to a text file",
     }
+    org_commands = {
+        "org": "Show your organization info",
+        "org-reports <handle> [<max>]": "List reports submitted to your program (default: 10)",
+        "org-report <id>": "Get a report submitted to your program",
+    }
+    all_commands = {**hacker_commands, **org_commands}
     if JSON_OUTPUT:
-        print(json.dumps({"commands": commands}))
+        print(json.dumps({"commands": all_commands}))
         return
-    print("Modules:")
-    for cmd, desc in commands.items():
-        print(f"    {cmd:<32}{desc}")
+    print("Hacker Modules:")
+    for cmd, desc in hacker_commands.items():
+        print(f"    {cmd:<36}{desc}")
+    print("\nProgram Management Modules:")
+    for cmd, desc in org_commands.items():
+        print(f"    {cmd:<36}{desc}")
     print("\nOptions:")
-    print("    --username, -u <username>    HackerOne username (overrides HACKERONE_USERNAME)")
-    print("    --api-key, -k <key>         HackerOne API key (overrides HACKERONE_API_KEY)")
-    print("    --json, -j                  Output as JSON")
-    print("    --env-file <path>           Path to .env file (default: .env in current directory)")
-    print("    --verbose, -v               Show progress and debug info")
+    print("    --username, -u <username>        HackerOne API token identifier (overrides HACKERONE_USERNAME)")
+    print("    --api-key, -k <key>             HackerOne API token value (overrides HACKERONE_API_KEY)")
+    print("    --json, -j                      Output as JSON")
+    print("    --env-file <path>               Path to .env file (default: .env in current directory)")
+    print("    --verbose, -v                   Show progress and debug info")
 
 
 def burp():
@@ -671,6 +680,186 @@ def scope():
         return
 
 
+# --- Program Management (Organization) Commands ---
+
+
+def org():
+    _log("Fetching organization info...")
+    r = requests.get("https://api.hackerone.com/v1/me/organizations", auth=auth)
+    if r.status_code != 200:
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    if len(data["data"]) == 0:
+        print("You don't belong to any organization.")
+        return
+
+    for o in data["data"]:
+        print("Organization")
+        print("----------------------------------------")
+        print("ID: " + o["id"])
+        print("Handle: " + o["attributes"]["handle"])
+        print("Name: " + o["attributes"]["name"])
+        print("Created: " + o["attributes"]["created_at"])
+        if "permissions" in o["attributes"] and o["attributes"]["permissions"]:
+            print("Permissions: " + ", ".join(o["attributes"]["permissions"]))
+        print("----------------------------------------")
+
+
+def org_reports():
+    if len(sys.argv) < 3:
+        _error("No program handle provided!")
+        return
+
+    handle = sys.argv[2]
+    limit = 10
+    if len(sys.argv) >= 4:
+        if sys.argv[3].isdigit() and int(sys.argv[3]) > 0:
+            limit = int(sys.argv[3])
+        else:
+            _error(f"Invalid maximum value '{sys.argv[3]}'!")
+            return
+
+    _log(f"Fetching reports for program '{handle}'...")
+    params = {
+        "filter[program][]": handle,
+        "page[size]": min(limit, 100),
+        "page[number]": 1,
+    }
+    r = requests.get("https://api.hackerone.com/v1/reports", params=params, auth=auth)
+    if r.status_code != 200:
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    if len(data["data"]) == 0:
+        print(f"No reports found for program '{handle}'.")
+        return
+
+    print(f"Reports for '{handle}'")
+    print("----------------------------------------")
+    count = 0
+    for rep in data["data"]:
+        if count >= limit:
+            break
+        print("ID: " + rep["id"])
+        print("Title: " + rep["attributes"]["title"])
+        print("State: " + rep["attributes"]["state"])
+        print("Date: " + rep["attributes"]["created_at"])
+        try:
+            print("Reporter: " + rep["relationships"]["reporter"]["data"]["attributes"]["username"])
+        except:
+            print("Reporter: unknown")
+        try:
+            print("Severity: " + rep["relationships"]["severity"]["data"]["attributes"]["rating"])
+        except:
+            print("Severity: none")
+        try:
+            print("CWE: " + str.upper(rep["relationships"]["weakness"]["data"]["attributes"]["external_id"]))
+        except:
+            pass
+        try:
+            print("CVSS: " + str(rep["relationships"]["severity"]["data"]["attributes"]["score"]))
+        except:
+            pass
+        print("----------------------------------------")
+        count += 1
+    print(f"\nShowing {count} of {len(data['data'])} results.")
+
+
+def org_report():
+    if len(sys.argv) != 3:
+        _error("Invalid arguments provided!")
+        return
+
+    if not sys.argv[2].isdigit():
+        _error(f"Invalid ID provided '{sys.argv[2]}'!")
+        return
+
+    id = sys.argv[2]
+
+    _log(f"Fetching report {id}...")
+    r = requests.get(f"https://api.hackerone.com/v1/reports/{id}", auth=auth)
+    if r.status_code == 404:
+        _error("Report not found!")
+        return
+    if r.status_code != 200:
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    rep = data["data"]
+
+    print("Report")
+    print("----------------------------------------")
+    print("ID: " + rep["id"])
+    print("Title: " + rep["attributes"]["title"])
+    print("State: " + rep["attributes"]["state"])
+    print("Date: " + rep["attributes"]["created_at"])
+    try:
+        print("Reporter: " + rep["relationships"]["reporter"]["data"]["attributes"]["username"])
+    except:
+        print("Reporter: unknown")
+    try:
+        print("Program: " + rep["relationships"]["program"]["data"]["attributes"]["handle"])
+    except:
+        pass
+    try:
+        print("Severity: " + rep["relationships"]["severity"]["data"]["attributes"]["rating"])
+    except:
+        print("Severity: none")
+    if "cve_ids" in rep["attributes"] and rep["attributes"]["cve_ids"] not in [None, "", []]:
+        print("CVE: " + ", ".join(rep["attributes"]["cve_ids"]))
+    try:
+        print("CWE: " + str.upper(rep["relationships"]["weakness"]["data"]["attributes"]["external_id"]))
+        print("Weakness: " + rep["relationships"]["weakness"]["data"]["attributes"]["name"])
+    except:
+        pass
+    try:
+        print("Asset: " + rep["relationships"]["structured_scope"]["data"]["attributes"]["asset_identifier"])
+    except:
+        pass
+    try:
+        print("CVSS: " + str(rep["relationships"]["severity"]["data"]["attributes"]["score"]))
+    except:
+        pass
+
+    if "vulnerability_information" in rep["attributes"] and rep["attributes"]["vulnerability_information"]:
+        print("\nContent")
+        print("--------------------")
+        print(_render_markdown(rep["attributes"]["vulnerability_information"]))
+
+    try:
+        activities = rep["relationships"]["activities"]["data"]
+        if activities:
+            print("\nActivities")
+            for act in activities:
+                print("--------------------")
+                try:
+                    actor = act["relationships"]["actor"]["data"]["attributes"]
+                    entity = actor.get("username") or actor.get("handle") or "someone"
+                except:
+                    entity = "someone"
+                act_type = act["type"].replace("activity-", "").replace("-", " ").title()
+                msg = ""
+                if "message" in act.get("attributes", {}) and act["attributes"]["message"]:
+                    msg = "\n" + act["attributes"]["message"]
+                print(f"@{entity} — {act_type}{msg}")
+            print("----------------------------------------")
+    except:
+        pass
+
+
 def _extract_flag(flag, *aliases):
     """Extract a --flag value from sys.argv, removing both the flag and its value."""
     for name in (flag, *aliases):
@@ -751,6 +940,12 @@ def main():
             burp()
         case "scope":
             scope()
+        case "org":
+            org()
+        case "org-reports":
+            org_reports()
+        case "org-report":
+            org_report()
         case _:
             _error(f"Invalid module '{command}'")
             sys.exit(1)
