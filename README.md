@@ -69,21 +69,36 @@ Run `just` to see all available recipes.
 
 ## Configuration
 
-Create a `.env` file in the project root:
+Credentials can be provided in three ways (in order of priority):
+
+**1. CLI flags** (highest priority):
 
 ```sh
-HACKERONE_USERNAME="your-username"
-HACKERONE_API_KEY="your-api-key"
+hackerone --username myuser --api-key mykey programs
+hackerone -u myuser -k mykey balance
 ```
 
-Or export them directly:
+**2. Environment variables**:
 
 ```sh
 export HACKERONE_USERNAME="your-username"
 export HACKERONE_API_KEY="your-api-key"
 ```
 
-You can get your API key from [HackerOne Settings](https://hackerone.com/settings/api_token/edit).
+**3. `.env` file** (auto-loaded from the current directory):
+
+```sh
+HACKERONE_USERNAME="your-username"
+HACKERONE_API_KEY="your-api-key"
+```
+
+You can also point to a custom `.env` file:
+
+```sh
+hackerone --env-file /path/to/.env programs
+```
+
+Get your API key from [HackerOne Settings](https://hackerone.com/settings/api_token/edit).
 
 ---
 
@@ -91,22 +106,31 @@ You can get your API key from [HackerOne Settings](https://hackerone.com/setting
 
 ```sh
 # With uv
-uv run hackerone <command> [args]
+uv run hackerone <command> [args] [options]
 
 # With pip install
-hackerone <command> [args]
+hackerone <command> [args] [options]
 
 # With just
 just run <command> [args]
 ```
+
+### Global Options
+
+| Flag | Short | Description |
+|---|---|---|
+| `--json` | `-j` | Machine-readable JSON output |
+| `--username <user>` | `-u` | HackerOne username (overrides env) |
+| `--api-key <key>` | `-k` | HackerOne API key (overrides env) |
+| `--env-file <path>` | | Path to a custom `.env` file |
 
 ### JSON Output
 
 Any command supports `--json` (or `-j`) for machine-readable output. Great for scripting, piping into `jq`, or integrating with other tools.
 
 ```sh
-uv run hackerone programs 5 --json
-uv run hackerone program security -j | jq '.attributes.handle'
+hackerone programs 5 --json
+hackerone program security -j | jq '.attributes.handle'
 ```
 
 ---

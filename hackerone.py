@@ -21,11 +21,9 @@ from requests.auth import HTTPBasicAuth
 __version__ = "1.0.1"
 
 load_dotenv()
-USERNAME = os.getenv("HACKERONE_USERNAME")
-TOKEN = os.getenv("HACKERONE_API_KEY")
-auth = HTTPBasicAuth(USERNAME, TOKEN)
 
 JSON_OUTPUT = False
+auth = None
 
 
 def _get_terminal_width(default=80):
@@ -68,6 +66,11 @@ def show_help():
     print("Modules:")
     for cmd, desc in commands.items():
         print(f"    {cmd:<32}{desc}")
+    print("\nOptions:")
+    print("    --username, -u <username>    HackerOne username (overrides HACKERONE_USERNAME)")
+    print("    --api-key, -k <key>         HackerOne API key (overrides HACKERONE_API_KEY)")
+    print("    --json, -j                  Output as JSON")
+    print("    --env-file <path>           Path to .env file (default: .env in current directory)")
 
 
 def burp():
@@ -651,19 +654,43 @@ def scope():
         return
 
 
+def _extract_flag(flag, *aliases):
+    """Extract a --flag value from sys.argv, removing both the flag and its value."""
+    for name in (flag, *aliases):
+        if name in sys.argv:
+            idx = sys.argv.index(name)
+            if idx + 1 < len(sys.argv):
+                value = sys.argv[idx + 1]
+                sys.argv = sys.argv[:idx] + sys.argv[idx + 2 :]
+                return value
+            else:
+                sys.argv = sys.argv[:idx] + sys.argv[idx + 1 :]
+                return None
+    return None
+
+
 def main():
-    global JSON_OUTPUT
+    global JSON_OUTPUT, auth
     if "--json" in sys.argv or "-j" in sys.argv:
         JSON_OUTPUT = True
         sys.argv = [a for a in sys.argv if a not in ("--json", "-j")]
 
+    env_file = _extract_flag("--env-file")
+    if env_file:
+        load_dotenv(env_file, override=True)
+
+    username = _extract_flag("--username", "-u") or os.getenv("HACKERONE_USERNAME")
+    api_key = _extract_flag("--api-key", "-k") or os.getenv("HACKERONE_API_KEY")
+
     if not JSON_OUTPUT:
         print()
 
-    if USERNAME is None:
-        _error_exit("Environment variable HACKERONE_USERNAME is not set!")
-    if TOKEN is None:
-        _error_exit("Environment variable HACKERONE_API_KEY is not set!")
+    if username is None:
+        _error_exit("No username provided! Use --username or set HACKERONE_USERNAME.")
+    if api_key is None:
+        _error_exit("No API key provided! Use --api-key or set HACKERONE_API_KEY.")
+
+    auth = HTTPBasicAuth(username, api_key)
 
     if len(sys.argv) < 2:
         _error("No argument provided!")
