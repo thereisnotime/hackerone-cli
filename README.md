@@ -15,7 +15,7 @@ An unofficial CLI client for [HackerOne](https://hackerone.com/). Manage your pr
   - [Global Options](#global-options) | [JSON Output](#json-output)
 - [Commands](#commands)
   - Hacker: [Programs & Scope](#programs--scope) | [Reports](#reports) | [Payments](#payments) | [Account](#account)
-  - Program Manager: [Organization](#organization--program-management)
+  - Program Manager: [Organization](#organization--program-management) — `org` `org-reports` `org-update-report` `org-metrics` `org-bounty` and more
 - [Development](#development)
 - [License](#license)
 
@@ -156,8 +156,18 @@ hackerone program security -j | jq '.attributes.handle'
 | [`help`](#help) | Show available commands |
 | | **Program Management** (requires org API token) |
 | [`org`](#org) | Show your organization info |
+| [`org-members <org_id>`](#org-members-org_id) | List organization members |
+| [`org-groups <org_id>`](#org-groups-org_id) | List permission groups |
+| [`org-invitations <org_id>`](#org-invitations-org_id) | List pending invitations |
 | [`org-reports <handle> [max]`](#org-reports-handle-max) | List reports submitted to your program |
 | [`org-report <id>`](#org-report-id) | Get a report submitted to your program |
+| [`org-update-report <id> <state>`](#org-update-report-id-state) | Update report state |
+| [`org-activities [handle]`](#org-activities-handle) | List recent activities |
+| [`org-metrics <handle>`](#org-metrics-handle) | Program metrics |
+| [`org-scopes <handle>`](#org-scopes-handle) | List program scope/assets |
+| [`org-invite-hacker <pid> <user>`](#org-invite-hacker-program_id-username) | Invite hacker to program |
+| [`org-bounty <id> <amount>`](#org-bounty-report_id-amount) | Award bounty |
+| [`org-swag <id>`](#org-swag-report_id) | Award swag |
 
 ---
 
@@ -474,6 +484,90 @@ Full details on a report submitted to your program, including content, activitie
 
 ```
 $ hackerone org-report 1234567
+```
+
+#### `org-update-report <id> <state>`
+
+Update the state of a report. Valid states: `triaged`, `resolved`, `duplicate`, `spam`, `not-applicable`, `informative`, `needs-more-info`, `new`.
+
+```sh
+hackerone org-update-report 1234567 triaged
+hackerone org-update-report 1234567 resolved "Fixed in v2.1"
+```
+
+#### `org-members <org_id>`
+
+List all members in your organization. Get your org ID from `org`.
+
+```sh
+hackerone org-members 12345
+```
+
+#### `org-groups <org_id>`
+
+List permission groups in your organization.
+
+```sh
+hackerone org-groups 12345
+```
+
+#### `org-invitations <org_id>`
+
+List pending organization member invitations.
+
+```sh
+hackerone org-invitations 12345
+```
+
+#### `org-activities [handle]`
+
+List recent activities across your programs. Optionally filter by program handle.
+
+```sh
+hackerone org-activities
+hackerone org-activities mycompany
+```
+
+#### `org-metrics <handle>`
+
+Get program health metrics — response times, acceptance rates, efficiency stats.
+
+```sh
+hackerone org-metrics mycompany
+```
+
+#### `org-scopes <handle>`
+
+List all structured scopes (assets) for a program, grouped by in-scope and out-of-scope.
+
+```sh
+hackerone org-scopes mycompany
+```
+
+#### `org-invite-hacker <program_id> <username>`
+
+Invite a hacker to a private program.
+
+```sh
+hackerone org-invite-hacker 12345 hackerman
+```
+
+#### `org-bounty <report_id> <amount>`
+
+Award a bounty on a report. Optionally include a message.
+
+```sh
+hackerone org-bounty 1234567 500
+hackerone org-bounty 1234567 1000 "Great find, thanks!"
+```
+
+#### `org-swag <report_id>`
+
+Award swag on a report. Optionally include a message.
+
+```sh
+hackerone org-swag 1234567
+hackerone org-swag 1234567 "T-shirt on its way!"
 ```
 
 ## Development

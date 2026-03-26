@@ -74,8 +74,18 @@ def show_help():
     }
     org_commands = {
         "org": "Show your organization info",
+        "org-members <org_id>": "List organization members",
+        "org-groups <org_id>": "List organization permission groups",
+        "org-invitations <org_id>": "List pending organization invitations",
         "org-reports <handle> [<max>]": "List reports submitted to your program (default: 10)",
         "org-report <id>": "Get a report submitted to your program",
+        "org-update-report <id> <state>": "Update report state (triaged, resolved, duplicate, spam, not-applicable)",
+        "org-activities [<handle>]": "List recent activities (optionally filter by program)",
+        "org-metrics <handle>": "Get program metrics and response efficiency",
+        "org-scopes <handle>": "List structured scopes (assets) for a program",
+        "org-invite-hacker <program_id> <username>": "Invite a hacker to a private program",
+        "org-bounty <report_id> <amount>": "Award a bounty on a report",
+        "org-swag <report_id>": "Award swag on a report",
     }
     all_commands = {**hacker_commands, **org_commands}
     if JSON_OUTPUT:
@@ -83,10 +93,10 @@ def show_help():
         return
     print("Hacker Modules:")
     for cmd, desc in hacker_commands.items():
-        print(f"    {cmd:<36}{desc}")
+        print(f"    {cmd:<44}{desc}")
     print("\nProgram Management Modules:")
     for cmd, desc in org_commands.items():
-        print(f"    {cmd:<36}{desc}")
+        print(f"    {cmd:<44}{desc}")
     print("\nOptions:")
     print("    --username, -u <username>        HackerOne API token identifier (overrides HACKERONE_USERNAME)")
     print("    --api-key, -k <key>             HackerOne API token value (overrides HACKERONE_API_KEY)")
@@ -860,6 +870,421 @@ def org_report():
         pass
 
 
+def org_members():
+    if len(sys.argv) < 3:
+        _error("No organization ID provided! Use 'org' to find your org ID.")
+        return
+
+    org_id = sys.argv[2]
+    _log(f"Fetching members for organization {org_id}...")
+    r = requests.get(f"https://api.hackerone.com/v1/organizations/{org_id}/members", auth=auth)
+    if r.status_code != 200:
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    if len(data["data"]) == 0:
+        print("No members found.")
+        return
+
+    print("Members")
+    print("----------------------------------------")
+    for member in data["data"]:
+        try:
+            user = member["relationships"]["user"]["data"]["attributes"]
+            print("Username: " + user.get("username", "unknown"))
+        except:
+            print("ID: " + member["id"])
+        try:
+            groups = member["relationships"]["organization_member_groups"]["data"]
+            group_names = [g["attributes"]["name"] for g in groups]
+            if group_names:
+                print("Groups: " + ", ".join(group_names))
+        except:
+            pass
+        print("----------------------------------------")
+    print(f"\n{len(data['data'])} members.")
+
+
+def org_groups():
+    if len(sys.argv) < 3:
+        _error("No organization ID provided! Use 'org' to find your org ID.")
+        return
+
+    org_id = sys.argv[2]
+    _log(f"Fetching groups for organization {org_id}...")
+    r = requests.get(f"https://api.hackerone.com/v1/organizations/{org_id}/groups", auth=auth)
+    if r.status_code != 200:
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    if len(data["data"]) == 0:
+        print("No groups found.")
+        return
+
+    print("Groups")
+    print("----------------------------------------")
+    for group in data["data"]:
+        print("ID: " + group["id"])
+        print("Name: " + group["attributes"]["name"])
+        try:
+            perms = group["attributes"]["permissions"]
+            if perms:
+                print("Permissions: " + ", ".join(perms))
+        except:
+            pass
+        print("----------------------------------------")
+
+
+def org_invitations():
+    if len(sys.argv) < 3:
+        _error("No organization ID provided! Use 'org' to find your org ID.")
+        return
+
+    org_id = sys.argv[2]
+    _log(f"Fetching invitations for organization {org_id}...")
+    r = requests.get(f"https://api.hackerone.com/v1/organizations/{org_id}/invitations", auth=auth)
+    if r.status_code != 200:
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    if len(data["data"]) == 0:
+        print("No pending invitations.")
+        return
+
+    print("Pending Invitations")
+    print("----------------------------------------")
+    for inv in data["data"]:
+        print("ID: " + inv["id"])
+        try:
+            print("Email: " + inv["attributes"]["email"])
+        except:
+            pass
+        try:
+            print("Created: " + inv["attributes"]["created_at"])
+        except:
+            pass
+        print("----------------------------------------")
+
+
+def org_update_report():
+    if len(sys.argv) < 4:
+        _error("Usage: org-update-report <id> <state>")
+        _error("States: triaged, resolved, duplicate, spam, not-applicable")
+        return
+
+    if not sys.argv[2].isdigit():
+        _error(f"Invalid report ID '{sys.argv[2]}'!")
+        return
+
+    report_id = sys.argv[2]
+    state = sys.argv[3]
+
+    state_map = {
+        "triaged": "activity-bug-triaged",
+        "resolved": "activity-bug-resolved",
+        "duplicate": "activity-bug-duplicate",
+        "spam": "activity-bug-spam",
+        "not-applicable": "activity-bug-not-applicable",
+        "informative": "activity-bug-informative",
+        "needs-more-info": "activity-bug-needs-more-info",
+        "new": "activity-bug-new",
+    }
+
+    if state not in state_map:
+        _error(f"Invalid state '{state}'. Valid states: {', '.join(state_map.keys())}")
+        return
+
+    message = sys.argv[4] if len(sys.argv) >= 5 else ""
+
+    _log(f"Updating report {report_id} to '{state}'...")
+    payload = {
+        "data": {
+            "type": state_map[state],
+            "attributes": {
+                "message": message,
+            },
+        }
+    }
+
+    r = requests.post(
+        f"https://api.hackerone.com/v1/reports/{report_id}/activities",
+        json=payload,
+        auth=auth,
+    )
+    if r.status_code not in (200, 201):
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    print(f"Report {report_id} updated to '{state}'.")
+
+
+def org_activities():
+    handle = sys.argv[2] if len(sys.argv) >= 3 else None
+
+    _log("Fetching activities...")
+    params = {"page[size]": 25}
+    if handle:
+        params["filter[program][]"] = handle
+
+    r = requests.get("https://api.hackerone.com/v1/incremental/activities", params=params, auth=auth)
+    if r.status_code != 200:
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    if len(data["data"]) == 0:
+        print("No activities found.")
+        return
+
+    print("Activities" + (f" for '{handle}'" if handle else ""))
+    print("----------------------------------------")
+    for act in data["data"]:
+        act_type = act["type"].replace("activity-", "").replace("-", " ").title()
+        try:
+            actor = act["relationships"]["actor"]["data"]["attributes"]
+            entity = actor.get("username") or actor.get("handle") or "someone"
+        except:
+            entity = "someone"
+        date = act.get("attributes", {}).get("created_at", "")
+        msg = ""
+        if "message" in act.get("attributes", {}) and act["attributes"]["message"]:
+            msg = "\n  " + act["attributes"]["message"][:200]
+        print(f"[{date}] @{entity} — {act_type}{msg}")
+        print("--------------------")
+
+
+def org_metrics():
+    if len(sys.argv) < 3:
+        _error("No program handle provided!")
+        return
+
+    handle = sys.argv[2]
+
+    # First get program ID from handle
+    _log(f"Fetching program '{handle}' to get ID...")
+    r = requests.get(f"https://api.hackerone.com/v1/hackers/programs/{handle}", auth=auth)
+    if r.status_code != 200:
+        _error_exit(f"Could not find program '{handle}' (status {r.status_code})!")
+    program_data = json.loads(r.text)
+    program_id = program_data.get("id", program_data.get("data", {}).get("id"))
+
+    if not program_id:
+        _error("Could not determine program ID!")
+        return
+
+    _log(f"Fetching metrics for program {program_id}...")
+    r = requests.get(f"https://api.hackerone.com/v1/programs/{program_id}/metrics", auth=auth)
+    if r.status_code != 200:
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    print(f"Metrics for '{handle}'")
+    print("----------------------------------------")
+    if "data" in data:
+        for key, value in data["data"].get("attributes", data["data"]).items():
+            if key not in ("type", "id"):
+                print(f"{key.replace('_', ' ').title()}: {value}")
+    else:
+        for key, value in data.items():
+            print(f"{key.replace('_', ' ').title()}: {value}")
+    print("----------------------------------------")
+
+
+def org_scopes():
+    if len(sys.argv) < 3:
+        _error("No program handle provided!")
+        return
+
+    handle = sys.argv[2]
+
+    _log(f"Fetching scopes for program '{handle}'...")
+    r = requests.get(
+        f"https://api.hackerone.com/v1/hackers/programs/{handle}/structured_scopes",
+        params={"page[size]": 100},
+        auth=auth,
+    )
+    if r.status_code != 200:
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    if len(data["data"]) == 0:
+        print(f"No scopes found for '{handle}'.")
+        return
+
+    in_scope = [s for s in data["data"] if s["attributes"].get("eligible_for_submission")]
+    out_scope = [s for s in data["data"] if not s["attributes"].get("eligible_for_submission")]
+
+    print(f"Scopes for '{handle}'")
+
+    if in_scope:
+        print("\nIn-Scope")
+        print("----------------------------------------")
+        for s in in_scope:
+            attrs = s["attributes"]
+            bounty = "yes" if attrs.get("eligible_for_bounty") else "no"
+            print(f"  {attrs['asset_identifier']} ({attrs['asset_type']}) — bounty: {bounty}")
+            if attrs.get("instruction"):
+                print(f"    {attrs['instruction'][:120]}")
+        print()
+
+    if out_scope:
+        print("Out-of-Scope")
+        print("----------------------------------------")
+        for s in out_scope:
+            attrs = s["attributes"]
+            print(f"  {attrs['asset_identifier']} ({attrs['asset_type']})")
+        print()
+
+    print(f"{len(in_scope)} in-scope, {len(out_scope)} out-of-scope.")
+
+
+def org_invite_hacker():
+    if len(sys.argv) < 4:
+        _error("Usage: org-invite-hacker <program_id> <username>")
+        return
+
+    program_id = sys.argv[2]
+    username = sys.argv[3]
+
+    _log(f"Inviting '{username}' to program {program_id}...")
+    payload = {
+        "data": [
+            {
+                "type": "hacker-invitation",
+                "attributes": {
+                    "username": username,
+                },
+            }
+        ]
+    }
+
+    r = requests.post(
+        f"https://api.hackerone.com/v1/programs/{program_id}/hacker_invitations",
+        json=payload,
+        auth=auth,
+    )
+    if r.status_code not in (200, 201):
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    print(f"Invitation sent to '{username}' for program {program_id}.")
+
+
+def org_bounty():
+    if len(sys.argv) < 4:
+        _error("Usage: org-bounty <report_id> <amount> [message]")
+        return
+
+    if not sys.argv[2].isdigit():
+        _error(f"Invalid report ID '{sys.argv[2]}'!")
+        return
+
+    report_id = sys.argv[2]
+    amount = sys.argv[3]
+    message = sys.argv[4] if len(sys.argv) >= 5 else ""
+
+    try:
+        float(amount)
+    except ValueError:
+        _error(f"Invalid amount '{amount}'!")
+        return
+
+    _log(f"Awarding ${amount} bounty on report {report_id}...")
+    payload = {
+        "data": {
+            "type": "bounty",
+            "attributes": {
+                "amount": float(amount),
+                "message": message,
+            },
+        }
+    }
+
+    r = requests.post(
+        f"https://api.hackerone.com/v1/reports/{report_id}/bounties",
+        json=payload,
+        auth=auth,
+    )
+    if r.status_code not in (200, 201):
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    print(f"Bounty of ${amount} awarded on report {report_id}.")
+
+
+def org_swag():
+    if len(sys.argv) < 3:
+        _error("Usage: org-swag <report_id> [message]")
+        return
+
+    if not sys.argv[2].isdigit():
+        _error(f"Invalid report ID '{sys.argv[2]}'!")
+        return
+
+    report_id = sys.argv[2]
+    message = sys.argv[3] if len(sys.argv) >= 4 else ""
+
+    _log(f"Awarding swag on report {report_id}...")
+    payload = {
+        "data": {
+            "type": "swag",
+            "attributes": {
+                "message": message,
+            },
+        }
+    }
+
+    r = requests.post(
+        f"https://api.hackerone.com/v1/reports/{report_id}/swag",
+        json=payload,
+        auth=auth,
+    )
+    if r.status_code not in (200, 201):
+        _error_exit(f"Request returned {r.status_code}!")
+    data = json.loads(r.text)
+
+    if JSON_OUTPUT:
+        print(json.dumps(data))
+        return
+
+    print(f"Swag awarded on report {report_id}.")
+
+
 def _extract_flag(flag, *aliases):
     """Extract a --flag value from sys.argv, removing both the flag and its value."""
     for name in (flag, *aliases):
@@ -942,10 +1367,30 @@ def main():
             scope()
         case "org":
             org()
+        case "org-members":
+            org_members()
+        case "org-groups":
+            org_groups()
+        case "org-invitations":
+            org_invitations()
         case "org-reports":
             org_reports()
         case "org-report":
             org_report()
+        case "org-update-report":
+            org_update_report()
+        case "org-activities":
+            org_activities()
+        case "org-metrics":
+            org_metrics()
+        case "org-scopes":
+            org_scopes()
+        case "org-invite-hacker":
+            org_invite_hacker()
+        case "org-bounty":
+            org_bounty()
+        case "org-swag":
+            org_swag()
         case _:
             _error(f"Invalid module '{command}'")
             sys.exit(1)
