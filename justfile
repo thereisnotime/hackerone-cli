@@ -40,10 +40,16 @@ test:
     uv run hackerone help > /dev/null
     echo "Testing help --json..."
     uv run hackerone help --json | python3 -m json.tool > /dev/null
+    echo "Testing no-creds error..."
+    output=$(HACKERONE_USERNAME="" HACKERONE_API_KEY="" uv run hackerone --env-file /dev/null balance 2>&1 || true)
+    echo "$output" | grep -q "No username provided" && echo "  OK" || { echo "  FAIL: should error without creds"; exit 1; }
     echo "Testing balance --json..."
     uv run hackerone balance --json | python3 -m json.tool > /dev/null
     echo "Testing programs 1 --json..."
     uv run hackerone programs 1 --json | python3 -m json.tool > /dev/null
+    echo "Testing verbose..."
+    output=$(uv run hackerone balance -v 2>&1)
+    echo "$output" | grep -q "Authenticated" && echo "  OK" || { echo "  FAIL: verbose should show auth info"; exit 1; }
     echo "All tests passed."
 
 # Clean up generated files

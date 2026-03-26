@@ -118,12 +118,16 @@ wheels = [
 
 [[package]]
 name = "hackerone-cli"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "." }
 dependencies = [
-    { name = "mdv" },
     { name = "python-dotenv" },
     { name = "requests" },
+]
+
+[package.optional-dependencies]
+markdown = [
+    { name = "mdv" },
 ]
 
 [package.dev-dependencies]
@@ -133,10 +137,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mdv" },
+    { name = "mdv", marker = "extra == 'markdown'" },
     { name = "python-dotenv" },
     { name = "requests" },
 ]
+provides-extras = ["markdown"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "ruff", specifier = ">=0.15.7" }]

@@ -6,24 +6,31 @@ import os
 import re
 import sys
 
-# Set COLUMNS before importing mdv to suppress its "Could not derive terminal width" warning
-if "COLUMNS" not in os.environ:
-    try:
-        os.environ["COLUMNS"] = str(os.get_terminal_size()[0])
-    except OSError:
-        os.environ["COLUMNS"] = "80"
-
-import mdv  # noqa: E402
 import requests
 from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
 
-__version__ = "1.0.1"
-
-load_dotenv()
+__version__ = "1.0.2"
 
 JSON_OUTPUT = False
+VERBOSE = False
 auth = None
+
+
+def _render_markdown(text):
+    """Try to render markdown with mdv, fall back to plain text."""
+    try:
+        if "COLUMNS" not in os.environ:
+            try:
+                os.environ["COLUMNS"] = str(os.get_terminal_size()[0])
+            except OSError:
+                os.environ["COLUMNS"] = "80"
+        import mdv
+
+        mdv.term_columns = _get_terminal_width()
+        return mdv.main(text)
+    except Exception:
+        return text
 
 
 def _get_terminal_width(default=80):
@@ -31,6 +38,11 @@ def _get_terminal_width(default=80):
         return os.get_terminal_size()[0]
     except OSError:
         return default
+
+
+def _log(msg):
+    if VERBOSE and not JSON_OUTPUT:
+        print(f"[*] {msg}", file=sys.stderr)
 
 
 def _error(msg):
@@ -42,7 +54,7 @@ def _error(msg):
 
 def _error_exit(msg):
     _error(msg)
-    sys.exit()
+    sys.exit(1)
 
 
 def show_help():
@@ -71,6 +83,7 @@ def show_help():
     print("    --api-key, -k <key>         HackerOne API key (overrides HACKERONE_API_KEY)")
     print("    --json, -j                  Output as JSON")
     print("    --env-file <path>           Path to .env file (default: .env in current directory)")
+    print("    --verbose, -v               Show progress and debug info")
 
 
 def burp():
@@ -80,6 +93,7 @@ def burp():
 
     handler = sys.argv[2]
 
+    _log(f"Downloading Burp config for '{handler}'...")
     r = requests.get(f"https://hackerone.com/teams/{handler}/assets/download_burp_project_file.json")
     if r.status_code != 200 and r.status_code != 404:
         _error_exit(f"Request returned {r.status_code}!")
@@ -104,6 +118,7 @@ def csv():
 
     handler = sys.argv[2]
 
+    _log(f"Downloading CSV scope for '{handler}'...")
     r = requests.get(f"https://hackerone.com/teams/{handler}/assets/download_csv.csv")
     if r.status_code != 200 and r.status_code != 404:
         _error_exit(f"Request returned {r.status_code}!")
@@ -122,6 +137,7 @@ def csv():
 
 
 def reports():
+    _log("Fetching reports...")
     r = requests.get("https://api.hackerone.com/v1/hackers/me/reports", auth=auth)
     if r.status_code != 200:
         _error_exit(f"Request returned {r.status_code}!")
@@ -173,6 +189,7 @@ def report():
 
     id = sys.argv[2]
 
+    _log(f"Fetching report {id}...")
     r = requests.get(f"https://api.hackerone.com/v1/hackers/reports/{id}", auth=auth)
     if r.status_code != 200 and r.status_code != 404:
         _error_exit(f"Request returned {r.status_code}!")
@@ -225,11 +242,7 @@ def report():
     if "vulnerability_information" in rep["attributes"]:
         print("\nContent")
         print("--------------------")
-        try:
-            mdv.term_columns = _get_terminal_width()
-            print(mdv.main(rep["attributes"]["vulnerability_information"]))
-        except FileNotFoundError:
-            print(rep["attributes"]["vulnerability_information"])
+        print(_render_markdown(rep["attributes"]["vulnerability_information"]))
 
     print("\nComments")
     for comment in rep["relationships"]["activities"]["data"]:
@@ -380,6 +393,7 @@ def report():
 
 
 def balance():
+    _log("Fetching balance...")
     r = requests.get("https://api.hackerone.com/v1/hackers/payments/balance", auth=auth)
     if r.status_code != 200:
         _error_exit(f"Request returned {r.status_code}!")
@@ -393,6 +407,7 @@ def balance():
 
 
 def earnings():
+    _log("Fetching earnings...")
     r = requests.get("https://api.hackerone.com/v1/hackers/payments/earnings", auth=auth)
     if r.status_code != 200:
         _error_exit(f"Request returned {r.status_code}!")
@@ -425,6 +440,7 @@ def earnings():
 
 
 def payouts():
+    _log("Fetching payouts...")
     r = requests.get("https://api.hackerone.com/v1/hackers/payments/payouts", auth=auth)
     if r.status_code != 200:
         _error_exit(f"Request returned {r.status_code}!")
@@ -461,7 +477,9 @@ def programs():
 
     results = []
 
+    _log("Fetching programs...")
     while True:
+        _log(f"  Fetching page {c + 1}...")
         r = requests.get(f"https://api.hackerone.com/v1/hackers/programs?page[size]=100&page[number]={c}", auth=auth)
         if r.status_code != 200 and r.status_code != 404:
             _error_exit(f"Request returned {r.status_code}!")
@@ -478,6 +496,7 @@ def programs():
 
         c += 1
 
+    _log(f"Fetched {len(results)} programs total.")
     results = results[::-1]
     results = results[:limit]
 
@@ -505,6 +524,7 @@ def programs():
 
 
 def profile():
+    _log("Fetching profile...")
     r = requests.get("https://api.hackerone.com/v1/hackers/me/reports", auth=auth)
     if r.status_code != 200:
         _error_exit(f"Request returned {r.status_code}!")
@@ -560,6 +580,7 @@ def program():
         return
     handle = sys.argv[2]
 
+    _log(f"Fetching program '{handle}'...")
     r = requests.get(f"https://api.hackerone.com/v1/hackers/programs/{handle}", auth=auth)
     if r.status_code != 200:
         _error_exit(f"Request returned {r.status_code}!")
@@ -582,11 +603,7 @@ def program():
 
     print("\nPolicy")
     print("--------------------")
-    try:
-        mdv.term_columns = _get_terminal_width()
-        print(mdv.main(data["attributes"]["policy"]))
-    except FileNotFoundError:
-        print(data["attributes"]["policy"])
+    print(_render_markdown(data["attributes"]["policy"]))
 
     print("\nScope")
     for scope in data["relationships"]["structured_scopes"]["data"]:
@@ -669,36 +686,47 @@ def _extract_flag(flag, *aliases):
     return None
 
 
+# Commands that don't need authentication
+NO_AUTH_COMMANDS = {"help", "scope"}
+
+
 def main():
-    global JSON_OUTPUT, auth
+    global JSON_OUTPUT, VERBOSE, auth
     if "--json" in sys.argv or "-j" in sys.argv:
         JSON_OUTPUT = True
         sys.argv = [a for a in sys.argv if a not in ("--json", "-j")]
 
-    env_file = _extract_flag("--env-file")
-    if env_file:
-        load_dotenv(env_file, override=True)
+    if "--verbose" in sys.argv or "-v" in sys.argv:
+        VERBOSE = True
+        sys.argv = [a for a in sys.argv if a not in ("--verbose", "-v")]
 
-    username = _extract_flag("--username", "-u") or os.getenv("HACKERONE_USERNAME")
-    api_key = _extract_flag("--api-key", "-k") or os.getenv("HACKERONE_API_KEY")
+    env_file = _extract_flag("--env-file")
+    load_dotenv(env_file if env_file else ".env")
+
+    username = _extract_flag("--username", "-u") or os.getenv("HACKERONE_USERNAME") or None
+    api_key = _extract_flag("--api-key", "-k") or os.getenv("HACKERONE_API_KEY") or None
 
     if not JSON_OUTPUT:
         print()
-
-    if username is None:
-        _error_exit("No username provided! Use --username or set HACKERONE_USERNAME.")
-    if api_key is None:
-        _error_exit("No API key provided! Use --api-key or set HACKERONE_API_KEY.")
-
-    auth = HTTPBasicAuth(username, api_key)
 
     if len(sys.argv) < 2:
         _error("No argument provided!")
         if not JSON_OUTPUT:
             print(f"Usage: {__file__} help")
-        sys.exit()
+        sys.exit(1)
 
-    match sys.argv[1]:
+    command = sys.argv[1]
+
+    # Only require credentials for commands that hit the API
+    if command not in NO_AUTH_COMMANDS:
+        if username is None:
+            _error_exit("No username provided! Use --username or set HACKERONE_USERNAME.")
+        if api_key is None:
+            _error_exit("No API key provided! Use --api-key or set HACKERONE_API_KEY.")
+        auth = HTTPBasicAuth(username, api_key)
+        _log(f"Authenticated as '{username}'.")
+
+    match command:
         case "csv":
             csv()
         case "help":
@@ -724,12 +752,12 @@ def main():
         case "scope":
             scope()
         case _:
-            _error(f"Invalid module '{sys.argv[1]}'")
-            sys.exit()
+            _error(f"Invalid module '{command}'")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("Exiting...")
+        print("\nExiting...")

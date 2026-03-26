@@ -6,21 +6,16 @@ An unofficial CLI client for [HackerOne](https://hackerone.com/). Manage your pr
 
 - [Quick Start](#quick-start)
 - [Installation](#installation)
+  - [Update](#update) | [Uninstall](#uninstall)
 - [Configuration](#configuration)
-  - [Credentials](#credentials)
-  - [Custom .env File](#custom-env-file)
+  - [Credentials](#credentials) | [Custom .env File](#custom-env-file)
 - [Usage](#usage)
-  - [Global Options](#global-options)
-  - [JSON Output](#json-output)
+  - [Global Options](#global-options) | [JSON Output](#json-output)
 - [Commands](#commands)
-  - [Programs & Scope](#programs--scope)
-    - [`programs`](#programs-max) | [`program`](#program-handle) | [`csv`](#csv-handle) | [`scope`](#scope-csv-outfile) | [`burp`](#burp-handle)
-  - [Reports](#reports)
-    - [`reports`](#reports-1) | [`report`](#report-id)
-  - [Payments](#payments)
-    - [`balance`](#balance) | [`earnings`](#earnings) | [`payouts`](#payouts)
-  - [Account](#account)
-    - [`profile`](#profile) | [`help`](#help)
+  - [Programs & Scope](#programs--scope) — `programs` `program` `csv` `scope` `burp`
+  - [Reports](#reports) — `reports` `report`
+  - [Payments](#payments) — `balance` `earnings` `payouts`
+  - [Account](#account) — `profile` `help`
 - [Development](#development)
 - [License](#license)
 
@@ -45,10 +40,32 @@ cd hackerone-cli
 uv tool install -e .
 ```
 
-This installs `hackerone` globally so you can run it from anywhere. Alternatively:
+For rendered markdown in `report` and `program` output, install with the optional `markdown` extra:
+
+```sh
+uv tool install -e ".[markdown]"
+```
+
+This installs `hackerone` globally so you can run it from anywhere.
+
+### Update
+
+```sh
+cd hackerone-cli
+git pull
+uv tool install -e . --force
+```
+
+### Uninstall
+
+```sh
+uv tool uninstall hackerone-cli
+```
+
+### Other install methods
 
 <details>
-<summary><strong>Other install methods</strong></summary>
+<summary>Click to expand</summary>
 
 **With pip:**
 
