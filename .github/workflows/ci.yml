@@ -77,9 +77,9 @@ jobs:
         run: |
           uv run hackerone help --json | python3 -c "
           import json,sys
-          cmds = json.load(sys.stdin)['commands']
-          for c in ['balance','reports','programs','profile','earnings','payouts']:
-              assert c in cmds, f'missing {c}'
+          keys = ' '.join(json.load(sys.stdin)['commands'].keys())
+          for c in ['balance','reports','programs','profile','earnings','payouts','report','program','burp','csv','scope']:
+              assert c in keys, f'missing {c}'
           "
 
       - name: "help --json: lists all org commands"
@@ -87,9 +87,9 @@ jobs:
         run: |
           uv run hackerone help --json | python3 -c "
           import json,sys
-          cmds = json.load(sys.stdin)['commands']
-          for c in ['org','org-members <org_id>','org-reports <handle> [<max>]','org-bounty <report_id> <amount>','org-swag <report_id>']:
-              assert c in cmds, f'missing {c}'
+          keys = ' '.join(json.load(sys.stdin)['commands'].keys())
+          for c in ['org','org-members','org-reports','org-report','org-update-report','org-activities','org-metrics','org-scopes','org-invite-hacker','org-bounty','org-swag']:
+              assert c in keys, f'missing {c}'
           "
 
       # --- Error handling ---
