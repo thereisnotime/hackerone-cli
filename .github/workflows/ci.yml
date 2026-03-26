@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.10
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Test help
+        run: uv run hackerone help
+
+      - name: Test help JSON
+        run: uv run hackerone help --json
+
+      - name: Test help JSON is valid
+        run: uv run hackerone help --json | python3 -m json.tool > /dev/null
+
+      - name: Test no-creds error
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="" HACKERONE_API_KEY="" uv run hackerone --env-file /dev/null balance 2>&1 || true)
+          echo "$output" | grep -q "No username provided"
+
+      - name: Test no-args error
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null 2>&1 || true)
+          echo "$output" | grep -q "No argument provided"
+
+      - name: Test invalid module error
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null notamodule 2>&1 || true)
+          echo "$output" | grep -q "Invalid module"
+
+      - name: Test help without creds
+        shell: bash
+        run: |
+          HACKERONE_USERNAME="" HACKERONE_API_KEY="" uv run hackerone --env-file /dev/null help

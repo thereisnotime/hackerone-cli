@@ -1,5 +1,7 @@
 # HackerOne CLI
 
+[![CI](https://github.com/thereisnotime/hackerone-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/thereisnotime/hackerone-cli/actions/workflows/ci.yml)
+
 An unofficial CLI client for [HackerOne](https://hackerone.com/). Manage your profile, reports, programs, payments, and more from the terminal. Built on the official [HackerOne API v1](https://api.hackerone.com/).
 
 ## Table of Contents
