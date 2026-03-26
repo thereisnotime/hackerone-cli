@@ -1,26 +1,28 @@
 # HackerOne CLI
 
-An unofficial CLI client for the [HackerOne](https://hackerone.com/) platform. Manage your profile, reports, programs, payments, and more — straight from the terminal.
-
-Built on the official [HackerOne API v1](https://api.hackerone.com/).
-
----
+An unofficial CLI client for [HackerOne](https://hackerone.com/). Manage your profile, reports, programs, payments, and more from the terminal. Built on the official [HackerOne API v1](https://api.hackerone.com/).
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
 - [Installation](#installation)
 - [Configuration](#configuration)
+  - [Credentials](#credentials)
+  - [Custom .env File](#custom-env-file)
 - [Usage](#usage)
-- [Modules](#modules)
-  - [Programs & Scope](#programs--scope) — `programs`, `program`, `scope`, `csv`, `burp`
-  - [Reports](#reports) — `reports`, `report`
-  - [Payments](#payments) — `balance`, `earnings`, `payouts`
-  - [Account](#account) — `profile`, `help`
+  - [Global Options](#global-options)
+  - [JSON Output](#json-output)
+- [Commands](#commands)
+  - [Programs & Scope](#programs--scope)
+    - [`programs`](#programs-max) | [`program`](#program-handle) | [`csv`](#csv-handle) | [`scope`](#scope-csv-outfile) | [`burp`](#burp-handle)
+  - [Reports](#reports)
+    - [`reports`](#reports-1) | [`report`](#report-id)
+  - [Payments](#payments)
+    - [`balance`](#balance) | [`earnings`](#earnings) | [`payouts`](#payouts)
+  - [Account](#account)
+    - [`profile`](#profile) | [`help`](#help)
 - [Development](#development)
 - [License](#license)
-
----
 
 ## Quick Start
 
@@ -33,13 +35,12 @@ echo 'HACKERONE_API_KEY="your-api-key"' >> .env
 uv run hackerone programs 5
 ```
 
----
-
 ## Installation
 
 **Requirements:** Python >= 3.10, a [HackerOne API key](https://hackerone.com/settings/api_token/edit)
 
-### With uv (recommended)
+<details>
+<summary><strong>With uv (recommended)</strong></summary>
 
 ```sh
 git clone git@github.com:thereisnotime/hackerone-cli.git
@@ -47,7 +48,10 @@ cd hackerone-cli
 uv sync
 ```
 
-### With pip
+</details>
+
+<details>
+<summary><strong>With pip</strong></summary>
 
 ```sh
 git clone git@github.com:thereisnotime/hackerone-cli.git
@@ -55,9 +59,10 @@ cd hackerone-cli
 pip install -e .
 ```
 
-### With just
+</details>
 
-If you have [just](https://github.com/casey/just) installed:
+<details>
+<summary><strong>With just</strong></summary>
 
 ```sh
 just install
@@ -65,34 +70,21 @@ just install
 
 Run `just` to see all available recipes.
 
----
+</details>
 
 ## Configuration
 
-Credentials can be provided in three ways (in order of priority):
+### Credentials
 
-**1. CLI flags** (highest priority):
+Credentials are resolved in this order (first match wins):
 
-```sh
-hackerone --username myuser --api-key mykey programs
-hackerone -u myuser -k mykey balance
-```
+| Method | Example |
+|---|---|
+| CLI flags | `hackerone -u myuser -k mykey programs` |
+| Environment variables | `export HACKERONE_USERNAME="..."` / `export HACKERONE_API_KEY="..."` |
+| `.env` file | Auto-loaded from the current directory |
 
-**2. Environment variables**:
-
-```sh
-export HACKERONE_USERNAME="your-username"
-export HACKERONE_API_KEY="your-api-key"
-```
-
-**3. `.env` file** (auto-loaded from the current directory):
-
-```sh
-HACKERONE_USERNAME="your-username"
-HACKERONE_API_KEY="your-api-key"
-```
-
-You can also point to a custom `.env` file:
+### Custom .env File
 
 ```sh
 hackerone --env-file /path/to/.env programs
@@ -100,19 +92,12 @@ hackerone --env-file /path/to/.env programs
 
 Get your API key from [HackerOne Settings](https://hackerone.com/settings/api_token/edit).
 
----
-
 ## Usage
 
 ```sh
-# With uv
-uv run hackerone <command> [args] [options]
-
-# With pip install
-hackerone <command> [args] [options]
-
-# With just
-just run <command> [args]
+uv run hackerone <command> [args] [options]   # with uv
+hackerone <command> [args] [options]           # with pip
+just run <command> [args]                      # with just
 ```
 
 ### Global Options
@@ -126,37 +111,42 @@ just run <command> [args]
 
 ### JSON Output
 
-Any command supports `--json` (or `-j`) for machine-readable output. Great for scripting, piping into `jq`, or integrating with other tools.
+Any command supports `--json` / `-j` for machine-readable output. Useful for scripting, piping into `jq`, or integrating with other tools.
 
 ```sh
 hackerone programs 5 --json
 hackerone program security -j | jq '.attributes.handle'
 ```
 
----
+## Commands
 
-## Modules
+### Command Reference
 
 | Command | Description |
 |---|---|
-| `programs [max]` | List programs you have access to (default: 10) |
-| `program <handle>` | Details on a specific program (scope, policy, bounty info) |
-| `scope <csv> [outfile]` | Extract in-scope targets from a CSV file |
-| `csv <handle>` | Download CSV scope file (public programs only) |
-| `burp <handle>` | Download Burp Suite config (public programs only) |
-| `reports` | List your submitted reports |
-| `report <id>` | Full details on a specific report |
-| `balance` | Check your current balance |
-| `earnings` | List your bounty earnings |
-| `payouts` | List your payouts |
-| `profile` | Your profile info |
-| `help` | Show available commands |
+| [`programs [max]`](#programs-max) | List programs you have access to (default: 10) |
+| [`program <handle>`](#program-handle) | Program details — scope, policy, bounty info |
+| [`csv <handle>`](#csv-handle) | Download CSV scope file (public only) |
+| [`scope <csv> [outfile]`](#scope-csv-outfile) | Extract in-scope targets from CSV |
+| [`burp <handle>`](#burp-handle) | Download Burp Suite config (public only) |
+| [`reports`](#reports-1) | List your submitted reports |
+| [`report <id>`](#report-id) | Full report details |
+| [`balance`](#balance) | Current balance |
+| [`earnings`](#earnings) | Bounty earnings |
+| [`payouts`](#payouts) | Payout history |
+| [`profile`](#profile) | Your profile info |
+| [`help`](#help) | Show available commands |
+
+---
 
 ### Programs & Scope
 
 #### `programs [max]`
 
 List recently updated programs you have access to, including private ones. Defaults to 10 results.
+
+<details>
+<summary>Example output</summary>
 
 ```
 $ hackerone programs 2
@@ -183,11 +173,16 @@ Bookmarked: no
 Got 2 results!
 ```
 
+</details>
+
 #### `program <handle>`
 
-Get details about a specific program — scope, policy, bounty info. Works with both public and private programs (if you have access).
+Get details about a specific program — scope, policy, bounty info. Works with both public and private programs you have access to.
 
 Find the handle via `programs` or from the URL: `https://hackerone.com/<handle>`.
+
+<details>
+<summary>Example output</summary>
 
 ```
 $ hackerone program security
@@ -212,21 +207,23 @@ Max Severity: critical
 --------------------
 ```
 
+</details>
+
 #### `csv <handle>`
 
-Download the CSV scope file from a public program. This uses a web endpoint, not the API.
+Download the CSV scope file from a public program. Uses a web endpoint (not the API), so only works with public programs.
 
 ```
 $ hackerone csv security
-
 Filename: scopes_for_security_(...).csv
 ```
 
 #### `scope <csv> [outfile]`
 
-Parse a downloaded CSV scope file and extract in-scope domains, URLs, IPs, CIDRs, and wildcards into a text file. Useful for feeding into other recon tools.
+Extract in-scope domains, URLs, IPs, CIDRs, and wildcards from a downloaded CSV scope file. Output defaults to `inscope.txt`. Useful for feeding into recon tools.
 
-Output file defaults to `inscope.txt`.
+<details>
+<summary>Example output</summary>
 
 ```
 $ hackerone scope scopes_for_example.csv targets.txt
@@ -240,21 +237,27 @@ test.example.com
 File 'targets.txt' saved!
 ```
 
+</details>
+
 #### `burp <handle>`
 
 Download the Burp Suite project configuration file from a public program.
 
 ```
 $ hackerone burp security
-
 Filename: security-(...).json
 ```
+
+---
 
 ### Reports
 
 #### `reports`
 
 List your submitted reports with key metadata.
+
+<details>
+<summary>Example output</summary>
 
 ```
 $ hackerone reports
@@ -272,9 +275,14 @@ CVSS: 3.7
 ----------------------------------------
 ```
 
+</details>
+
 #### `report <id>`
 
-Get the full details on a specific report — severity, comments, bounties, content, CVE/CWE, and more.
+Full details on a specific report — severity, comments, bounties, content, CVE/CWE, and more.
+
+<details>
+<summary>Example output</summary>
 
 ```
 $ hackerone report 1234567
@@ -302,6 +310,10 @@ Thanks for the report. We're looking into it.
 ----------------------------------------
 ```
 
+</details>
+
+---
+
 ### Payments
 
 #### `balance`
@@ -310,13 +322,15 @@ Check your current balance (in the currency set on your profile).
 
 ```
 $ hackerone balance
-
 Balance: 1337.0
 ```
 
 #### `earnings`
 
 List your bounty earnings by program.
+
+<details>
+<summary>Example output</summary>
 
 ```
 $ hackerone earnings
@@ -330,9 +344,14 @@ Report: RXSS at example.hackerone.com
 ----------------------------------------
 ```
 
+</details>
+
 #### `payouts`
 
 List your processed payouts.
+
+<details>
+<summary>Example output</summary>
 
 ```
 $ hackerone payouts
@@ -346,11 +365,18 @@ Provider: Paypal
 ----------------------------------------
 ```
 
+</details>
+
+---
+
 ### Account
 
 #### `profile`
 
 Show your profile info. Requires at least one submitted report (the API derives your profile from the reporter field).
+
+<details>
+<summary>Example output</summary>
 
 ```
 $ hackerone profile
@@ -368,11 +394,11 @@ Location: Right here
 ----------------------------------------
 ```
 
+</details>
+
 #### `help`
 
 Show all available commands and their arguments.
-
----
 
 ## Development
 
@@ -391,8 +417,6 @@ uv sync
 uv run ruff check .
 uv run ruff format .
 ```
-
----
 
 ## License
 
