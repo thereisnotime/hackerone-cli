@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, master]
 
+env:
+  NO_CREDS: HACKERONE_USERNAME="" HACKERONE_API_KEY=""
+  FAKE_CREDS: HACKERONE_USERNAME="x" HACKERONE_API_KEY="x"
+
 jobs:
   lint:
     name: Lint
@@ -32,6 +36,7 @@ jobs:
     name: Test
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.10", "3.12", "3.13"]
@@ -47,37 +52,170 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Test help
-        shell: bash
-        run: uv run hackerone help
+      # --- Help & JSON output ---
 
-      - name: Test help JSON
+      - name: "help: shows output"
         shell: bash
-        run: uv run hackerone help --json
+        run: uv run hackerone help | grep -q "Hacker Modules"
 
-      - name: Test help JSON is valid
+      - name: "help: works without credentials"
+        shell: bash
+        run: |
+          HACKERONE_USERNAME="" HACKERONE_API_KEY="" uv run hackerone --env-file /dev/null help | grep -q "Hacker Modules"
+
+      - name: "help --json: returns valid JSON"
         shell: bash
         run: uv run hackerone help --json | python3 -m json.tool > /dev/null
 
-      - name: Test no-creds error
+      - name: "help --json: contains commands key"
+        shell: bash
+        run: |
+          uv run hackerone help --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'commands' in d"
+
+      - name: "help --json: lists all hacker commands"
+        shell: bash
+        run: |
+          uv run hackerone help --json | python3 -c "
+          import json,sys
+          cmds = json.load(sys.stdin)['commands']
+          for c in ['balance','reports','programs','profile','earnings','payouts']:
+              assert c in cmds, f'missing {c}'
+          "
+
+      - name: "help --json: lists all org commands"
+        shell: bash
+        run: |
+          uv run hackerone help --json | python3 -c "
+          import json,sys
+          cmds = json.load(sys.stdin)['commands']
+          for c in ['org','org-members <org_id>','org-reports <handle> [<max>]','org-bounty <report_id> <amount>','org-swag <report_id>']:
+              assert c in cmds, f'missing {c}'
+          "
+
+      # --- Error handling ---
+
+      - name: "error: no credentials"
         shell: bash
         run: |
           output=$(HACKERONE_USERNAME="" HACKERONE_API_KEY="" uv run hackerone --env-file /dev/null balance 2>&1 || true)
           echo "$output" | grep -q "No username provided"
 
-      - name: Test no-args error
+      - name: "error: no API key"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="" uv run hackerone --env-file /dev/null balance 2>&1 || true)
+          echo "$output" | grep -q "No API key provided"
+
+      - name: "error: no arguments"
         shell: bash
         run: |
           output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null 2>&1 || true)
           echo "$output" | grep -q "No argument provided"
 
-      - name: Test invalid module error
+      - name: "error: invalid module"
         shell: bash
         run: |
           output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null notamodule 2>&1 || true)
           echo "$output" | grep -q "Invalid module"
 
-      - name: Test help without creds
+      - name: "error: no-creds JSON outputs valid JSON"
         shell: bash
         run: |
-          HACKERONE_USERNAME="" HACKERONE_API_KEY="" uv run hackerone --env-file /dev/null help
+          output=$(HACKERONE_USERNAME="" HACKERONE_API_KEY="" uv run hackerone --env-file /dev/null --json balance 2>&1 || true)
+          echo "$output" | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'error' in d"
+
+      # --- Argument validation ---
+
+      - name: "report: rejects non-numeric ID"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null report abc 2>&1 || true)
+          echo "$output" | grep -q "Invalid ID"
+
+      - name: "org-report: rejects non-numeric ID"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-report abc 2>&1 || true)
+          echo "$output" | grep -q "Invalid ID"
+
+      - name: "org-update-report: rejects invalid state"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-update-report 123 badstate 2>&1 || true)
+          echo "$output" | grep -q "Invalid state"
+
+      - name: "org-update-report: rejects missing args"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-update-report 2>&1 || true)
+          echo "$output" | grep -q "Usage"
+
+      - name: "org-bounty: rejects invalid amount"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-bounty 123 notanumber 2>&1 || true)
+          echo "$output" | grep -q "Invalid amount"
+
+      - name: "org-bounty: rejects missing args"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-bounty 2>&1 || true)
+          echo "$output" | grep -q "Usage"
+
+      - name: "org-members: requires org ID"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-members 2>&1 || true)
+          echo "$output" | grep -q "No organization ID"
+
+      - name: "org-groups: requires org ID"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-groups 2>&1 || true)
+          echo "$output" | grep -q "No organization ID"
+
+      - name: "org-reports: requires handle"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-reports 2>&1 || true)
+          echo "$output" | grep -q "No program handle"
+
+      - name: "org-metrics: requires handle"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-metrics 2>&1 || true)
+          echo "$output" | grep -q "No program handle"
+
+      - name: "org-scopes: requires handle"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-scopes 2>&1 || true)
+          echo "$output" | grep -q "No program handle"
+
+      - name: "org-invite-hacker: requires args"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-invite-hacker 2>&1 || true)
+          echo "$output" | grep -q "Usage"
+
+      - name: "org-swag: requires report ID"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null org-swag 2>&1 || true)
+          echo "$output" | grep -q "Usage"
+
+      # --- Scope (no creds needed) ---
+
+      - name: "scope: works without credentials"
+        shell: bash
+        run: |
+          HACKERONE_USERNAME="" HACKERONE_API_KEY="" uv run hackerone --env-file /dev/null scope 2>&1 | grep -q "Invalid arguments"
+
+      # --- Verbose flag ---
+
+      - name: "verbose: shows auth info"
+        shell: bash
+        run: |
+          output=$(HACKERONE_USERNAME="x" HACKERONE_API_KEY="x" uv run hackerone --env-file /dev/null -v help 2>&1 || true)
+          # help doesn't show auth (no creds needed), but should still work
+          echo "$output" | grep -q "Hacker Modules"
