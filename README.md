@@ -29,46 +29,48 @@ An unofficial CLI client for [HackerOne](https://hackerone.com/). Manage your pr
 ```sh
 git clone git@github.com:thereisnotime/hackerone-cli.git
 cd hackerone-cli
-uv sync
+uv tool install -e .
 echo 'HACKERONE_USERNAME="your-username"' > .env
 echo 'HACKERONE_API_KEY="your-api-key"' >> .env
-uv run hackerone programs 5
+hackerone programs 5
 ```
 
 ## Installation
 
 **Requirements:** Python >= 3.10, a [HackerOne API key](https://hackerone.com/settings/api_token/edit)
 
-<details>
-<summary><strong>With uv (recommended)</strong></summary>
-
 ```sh
 git clone git@github.com:thereisnotime/hackerone-cli.git
 cd hackerone-cli
-uv sync
+uv tool install -e .
 ```
 
-</details>
+This installs `hackerone` globally so you can run it from anywhere. Alternatively:
 
 <details>
-<summary><strong>With pip</strong></summary>
+<summary><strong>Other install methods</strong></summary>
+
+**With pip:**
 
 ```sh
-git clone git@github.com:thereisnotime/hackerone-cli.git
-cd hackerone-cli
 pip install -e .
 ```
 
-</details>
+**With uv (project-local):**
 
-<details>
-<summary><strong>With just</strong></summary>
+```sh
+uv sync                     # install in .venv
+uv run hackerone programs    # run via uv
+# or activate the venv directly:
+source .venv/bin/activate
+hackerone programs
+```
+
+**With just:**
 
 ```sh
 just install
 ```
-
-Run `just` to see all available recipes.
 
 </details>
 
@@ -95,9 +97,7 @@ Get your API key from [HackerOne Settings](https://hackerone.com/settings/api_to
 ## Usage
 
 ```sh
-uv run hackerone <command> [args] [options]   # with uv
-hackerone <command> [args] [options]           # with pip
-just run <command> [args]                      # with just
+hackerone <command> [args] [options]
 ```
 
 ### Global Options
