@@ -48,12 +48,15 @@ jobs:
         run: uv sync
 
       - name: Test help
+        shell: bash
         run: uv run hackerone help
 
       - name: Test help JSON
+        shell: bash
         run: uv run hackerone help --json
 
       - name: Test help JSON is valid
+        shell: bash
         run: uv run hackerone help --json | python3 -m json.tool > /dev/null
 
       - name: Test no-creds error
