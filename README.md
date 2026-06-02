@@ -1,6 +1,9 @@
 # HackerOne CLI
 
-[![CI](https://github.com/thereisnotime/hackerone-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/thereisnotime/hackerone-cli/actions/workflows/ci.yml)
+| | | | |
+|:---:|:---:|:---:|:---:|
+| [![CI](https://github.com/thereisnotime/hackerone-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/thereisnotime/hackerone-cli/actions/workflows/ci.yml) | [![Release](https://github.com/thereisnotime/hackerone-cli/actions/workflows/release.yml/badge.svg)](https://github.com/thereisnotime/hackerone-cli/actions/workflows/release.yml) | [![Version](https://img.shields.io/github/v/release/thereisnotime/hackerone-cli?label=version)](https://github.com/thereisnotime/hackerone-cli/releases) | [![License](https://img.shields.io/github/license/thereisnotime/hackerone-cli)](./LICENSE) |
+| ![Python](https://img.shields.io/badge/python-3.14+-3776AB?logo=python&logoColor=white) | ![uv](https://img.shields.io/badge/uv-package%20manager-DE5FE9) | ![Ruff](https://img.shields.io/badge/linter-ruff-D7FF64) | ![pytest](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white) |
 
 An unofficial CLI client for [HackerOne](https://hackerone.com/). Manage your profile, reports, programs, payments, and more from the terminal. Built on the official [HackerOne API v1](https://api.hackerone.com/).
 
