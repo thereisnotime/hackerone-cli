@@ -10,7 +10,7 @@ import requests
 from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 JSON_OUTPUT = False
 VERBOSE = False

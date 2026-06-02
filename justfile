@@ -56,6 +56,15 @@ test:
     echo "$output" | grep -q "Authenticated" && echo "  OK" || { echo "  FAIL: verbose should show auth info"; exit 1; }
     echo "All tests passed."
 
+# Cut a release: bump version, commit, tag, and push (usage: just release 1.2.3)
+release version:
+    sed -i 's/__version__ = ".*"/__version__ = "{{version}}"/' hackerone.py
+    git add hackerone.py
+    git commit -m "bump version to {{version}}"
+    git push origin main
+    git tag v{{version}}
+    git push origin v{{version}}
+
 # Clean up generated files
 clean:
     rm -rf .venv .ruff_cache *.egg-info dist build __pycache__
