@@ -58,6 +58,10 @@ quote-style = "double"
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.0",
     "pytest>=8.0",
     "ruff>=0.15.7",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

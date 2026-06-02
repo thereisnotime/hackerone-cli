@@ -20,6 +20,7 @@ An unofficial CLI client for [HackerOne](https://hackerone.com/). Manage your pr
   - Hacker: [Programs & Scope](#programs--scope) | [Reports](#reports) | [Payments](#payments) | [Account](#account)
   - Program Manager: [Organization](#organization--program-management) — `org` `org-reports` `org-update-report` `org-metrics` `org-bounty` and more
 - [Development](#development)
+- [Contributing](#contributing)
 - [License](#license)
 
 ## Quick Start
@@ -590,6 +591,10 @@ uv sync
 uv run ruff check .
 uv run ruff format .
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, dev workflow, and PR guidelines.
 
 ## License
 

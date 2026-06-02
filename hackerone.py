@@ -1314,6 +1314,13 @@ def main():
         VERBOSE = True
         sys.argv = [a for a in sys.argv if a not in ("--verbose", "-v")]
 
+    if "--version" in sys.argv or "-V" in sys.argv:
+        if JSON_OUTPUT:
+            print(json.dumps({"version": __version__}))
+        else:
+            print(f"hackerone-cli v{__version__}")
+        sys.exit(0)
+
     env_file = _extract_flag("--env-file")
     load_dotenv(env_file if env_file else ".env")
 
