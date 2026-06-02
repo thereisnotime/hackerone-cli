@@ -1,6 +1,6 @@
 [project]
 name = "hackerone-cli"
-version = "1.0.2"
+dynamic = ["version"]
 description = "An unofficial CLI tool for interacting with the HackerOne API"
 readme = "README.md"
 license = { text = "MIT" }
@@ -16,9 +16,17 @@ markdown = ["mdv"]
 [project.scripts]
 hackerone = "hackerone:main"
 
+[project.urls]
+Homepage = "https://github.com/thereisnotime/hackerone-cli"
+Source = "https://github.com/thereisnotime/hackerone-cli"
+Issues = "https://github.com/thereisnotime/hackerone-cli/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "hackerone.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]
