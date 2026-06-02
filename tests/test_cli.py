@@ -39,13 +39,37 @@ class TestHelp:
     def test_json_hacker_commands(self):
         r = run("help", "--json")
         keys = " ".join(json.loads(r.stdout)["commands"])
-        for cmd in ["balance", "reports", "programs", "profile", "earnings", "payouts", "report", "program", "burp", "csv", "scope"]:
+        for cmd in [
+            "balance",
+            "reports",
+            "programs",
+            "profile",
+            "earnings",
+            "payouts",
+            "report",
+            "program",
+            "burp",
+            "csv",
+            "scope",
+        ]:
             assert cmd in keys
 
     def test_json_org_commands(self):
         r = run("help", "--json")
         keys = " ".join(json.loads(r.stdout)["commands"])
-        for cmd in ["org", "org-members", "org-reports", "org-report", "org-update-report", "org-activities", "org-metrics", "org-scopes", "org-invite-hacker", "org-bounty", "org-swag"]:
+        for cmd in [
+            "org",
+            "org-members",
+            "org-reports",
+            "org-report",
+            "org-update-report",
+            "org-activities",
+            "org-metrics",
+            "org-scopes",
+            "org-invite-hacker",
+            "org-bounty",
+            "org-swag",
+        ]:
             assert cmd in keys
 
 
