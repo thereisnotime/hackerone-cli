@@ -32,6 +32,10 @@ run *ARGS:
 run-json *ARGS:
     uv run hackerone {{ ARGS }} --json
 
+# Run pytest (no credentials needed)
+pytest:
+    uv run pytest tests/ -v
+
 # Quick smoke test against the API
 test:
     #!/usr/bin/env bash
